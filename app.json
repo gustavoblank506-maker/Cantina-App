@@ -19,6 +19,8 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
+      "themeColor": "#EADCC3",
+      "backgroundColor": "#EADCC3",
       "favicon": "./assets/favicon.png",
       "output": "single",
       "name": "Cantina"
