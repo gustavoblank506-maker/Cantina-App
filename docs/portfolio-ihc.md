@@ -11,5 +11,5 @@
 | Protótipo navegável | Link acima | Pronto |
 | Fluxo documentado | [fluxo-de-navegacao.md](fluxo-de-navegacao.md) | Pronto |
 | 2 estados alternativos | [fluxo-de-navegacao.md](fluxo-de-navegacao.md#estados-alternativos) | Pronto |
-| Ficha de teste cruzado | [ficha-de-teste.docx](ficha-de-teste.docx) | Falta aplicar com outra equipe |
+| Ficha de teste cruzado | [ficha-de-teste.docx](ficha-de-teste.docx) | Falta aplicar com outra pessoa |
 | Registro das melhorias | [registro-de-melhorias.docx](registro-de-melhorias.docx) | Falta preencher após o teste |
