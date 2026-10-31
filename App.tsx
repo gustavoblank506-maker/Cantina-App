@@ -38,8 +38,10 @@ const fonts = { title: 'Fraunces_900Black', body: 'DMSans_400Regular', medium: '
 type Status = 'Em preparo' | 'Pronto' | 'Entregue';
 type Screen = 'cardapio' | 'revisao' | 'acompanhamento';
 type Order = { number: number; name: string; summary: string; status: Status };
+type Notice = { message: string; attempt: number };
 
 const statuses: Status[] = ['Em preparo', 'Pronto', 'Entregue'];
+const maxPerItem = 5;
 
 const menu = [
   { id: 'sanduiche', name: 'Sanduíche natural', price: 7 },
@@ -146,19 +148,28 @@ export default function App() {
   const [orders, setOrders] = useState(initialOrders);
   const [nextNumber, setNextNumber] = useState(47);
   const [activeNumber, setActiveNumber] = useState<number | null>(null);
+  const [notice, setNotice] = useState<Notice>({ message: '', attempt: 0 });
 
   if (!fontsLoaded) return <View style={styles.page} />;
 
+  const showNotice = (message: string) => setNotice(({ attempt }) => ({ message, attempt: attempt + 1 }));
+
   const goTo = (next: Screen, nextDirection = 1) => {
+    showNotice('');
     setDirection(nextDirection);
     setScreen(next);
   };
 
-  const changeQuantity = (id: string, delta: number) =>
-    setCart((current) => {
-      const { [id]: quantity = 0, ...others } = current;
-      return quantity + delta > 0 ? { ...others, [id]: quantity + delta } : others;
-    });
+  const changeQuantity = (id: string, delta: number) => {
+    const { [id]: quantity = 0, ...others } = cart;
+    const next = quantity + delta;
+    if (next > maxPerItem) {
+      showNotice(`Limite de ${maxPerItem} unidades por item.`);
+      return;
+    }
+    showNotice('');
+    setCart(next > 0 ? { ...others, [id]: next } : others);
+  };
 
   const confirmOrder = () => {
     const summary = menu
@@ -180,8 +191,14 @@ export default function App() {
   const setOrderStatus = (number: number, status: Status) =>
     setOrders((current) => current.map((order) => (order.number === number ? { ...order, status } : order)));
 
-  const toggleSoldOut = (id: string) =>
+  const toggleSoldOut = (id: string) => {
+    const name = menu.find((item) => item.id === id)?.name;
+    if (!soldOut.includes(id) && cart[id]) {
+      changeQuantity(id, -cart[id]);
+      showNotice(`${name} esgotou e foi removido do pedido.`);
+    }
     setSoldOut((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+  };
 
   const activeOrder = orders.find((order) => order.number === activeNumber);
   const sideBySide = width >= 760;
@@ -190,13 +207,14 @@ export default function App() {
     <Phone fullBleed={fullBleed}>
       <FadeIn key={screen} x={24 * direction} y={0} style={styles.screen}>
         {screen === 'cardapio' && (
-          <MenuScreen cart={cart} soldOut={soldOut} onAdd={(id) => changeQuantity(id, 1)} onNext={() => goTo('revisao')} />
+          <MenuScreen cart={cart} soldOut={soldOut} notice={notice} onChange={changeQuantity} onNext={() => goTo('revisao')} />
         )}
         {screen === 'revisao' && (
           <ReviewScreen
             cart={cart}
-            soldOut={soldOut}
+            notice={notice}
             onChange={changeQuantity}
+            onError={showNotice}
             onConfirm={confirmOrder}
             onBack={() => goTo('cardapio', -1)}
           />
@@ -281,15 +299,38 @@ function RoundButton({ label, name, onPress }: { label: string; name: string; on
   );
 }
 
+function NoticeBox({ notice }: { notice: Notice }) {
+  if (!notice.message) return null;
+  return (
+    <Shake key={notice.attempt}>
+      <Text accessibilityRole="alert" style={styles.errorBox}>
+        {notice.message}
+      </Text>
+    </Shake>
+  );
+}
+
+function QuantityControl({ item, quantity, onChange }: { item: string; quantity: number; onChange: (delta: number) => void }) {
+  return (
+    <View style={styles.quantity}>
+      <RoundButton label="−" name={`Diminuir ${item}`} onPress={() => onChange(-1)} />
+      <Text style={styles.quantityText}>{quantity}</Text>
+      <RoundButton label="+" name={`Aumentar ${item}`} onPress={() => onChange(1)} />
+    </View>
+  );
+}
+
 function MenuScreen({
   cart,
   soldOut,
-  onAdd,
+  notice,
+  onChange,
   onNext,
 }: {
   cart: Record<string, number>;
   soldOut: string[];
-  onAdd: (id: string) => void;
+  notice: Notice;
+  onChange: (id: string, delta: number) => void;
   onNext: () => void;
 }) {
   const count = Object.values(cart).reduce((sum, quantity) => sum + quantity, 0);
@@ -297,6 +338,7 @@ function MenuScreen({
     <>
       <Text style={styles.title}>Cardápio</Text>
       <View style={styles.list}>
+        <Text style={styles.caption}>Limite de {maxPerItem} unidades por item.</Text>
         {menu.map((item, index) => {
           const unavailable = soldOut.includes(item.id);
           return (
@@ -307,14 +349,17 @@ function MenuScreen({
               </View>
               {unavailable ? (
                 <Text style={styles.soldOut}>Esgotado</Text>
+              ) : cart[item.id] ? (
+                <QuantityControl item={item.name} quantity={cart[item.id]} onChange={(delta) => onChange(item.id, delta)} />
               ) : (
-                <RoundButton label="+" name={`Adicionar ${item.name}`} onPress={() => onAdd(item.id)} />
+                <RoundButton label="+" name={`Adicionar ${item.name}`} onPress={() => onChange(item.id, 1)} />
               )}
             </FadeIn>
           );
         })}
       </View>
       <View style={styles.footer}>
+        <NoticeBox notice={notice} />
         <Pop key={count}>
           <PrimaryButton label={count ? `Ver pedido (${count})` : 'Ver pedido'} onPress={onNext} />
         </Pop>
@@ -325,25 +370,24 @@ function MenuScreen({
 
 function ReviewScreen({
   cart,
-  soldOut,
+  notice,
   onChange,
+  onError,
   onConfirm,
   onBack,
 }: {
   cart: Record<string, number>;
-  soldOut: string[];
+  notice: Notice;
   onChange: (id: string, delta: number) => void;
+  onError: (message: string) => void;
   onConfirm: () => void;
   onBack: () => void;
 }) {
-  const [error, setError] = useState({ message: '', attempt: 0 });
   const items = menu.filter((item) => cart[item.id]);
   const total = items.reduce((sum, item) => sum + item.price * cart[item.id], 0);
-  const showError = (message: string) => setError(({ attempt }) => ({ message, attempt: attempt + 1 }));
 
   const confirm = () => {
-    if (!items.length) showError('Adicione pelo menos um item antes de confirmar.');
-    else if (items.some((item) => soldOut.includes(item.id))) showError('Remova o item esgotado para confirmar.');
+    if (!items.length) onError('Adicione pelo menos um item antes de confirmar.');
     else onConfirm();
   };
 
@@ -359,16 +403,11 @@ function ReviewScreen({
               <Text style={styles.itemName}>{money(item.price * cart[item.id])}</Text>
             </View>
             <View style={styles.row}>
-              <View style={styles.quantity}>
-                <RoundButton label="−" name={`Diminuir ${item.name}`} onPress={() => onChange(item.id, -1)} />
-                <Text style={styles.quantityText}>{cart[item.id]}</Text>
-                <RoundButton label="+" name={`Aumentar ${item.name}`} onPress={() => onChange(item.id, 1)} />
-              </View>
+              <QuantityControl item={item.name} quantity={cart[item.id]} onChange={(delta) => onChange(item.id, delta)} />
               <Tap accessibilityRole="button" onPress={() => onChange(item.id, -cart[item.id])}>
                 <Text style={styles.remove}>Remover</Text>
               </Tap>
             </View>
-            {soldOut.includes(item.id) && <Text style={styles.inlineError}>Este item acabou de esgotar.</Text>}
           </FadeIn>
         ))}
         <View style={styles.totalRow}>
@@ -378,13 +417,7 @@ function ReviewScreen({
         <Text style={styles.caption}>Pagamento na retirada.</Text>
       </View>
       <View style={styles.footer}>
-        {!!error.message && (
-          <Shake key={error.attempt}>
-            <Text accessibilityRole="alert" style={styles.errorBox}>
-              {error.message}
-            </Text>
-          </Shake>
-        )}
+        <NoticeBox notice={notice} />
         <PrimaryButton label="Confirmar pedido" onPress={confirm} />
         <SecondaryButton label="Voltar ao cardápio" onPress={onBack} />
       </View>
@@ -570,7 +603,6 @@ const styles = StyleSheet.create({
   quantity: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   quantityText: { fontFamily: fonts.bold, color: colors.ink, fontSize: 14 },
   remove: { fontFamily: fonts.medium, color: colors.ink, fontSize: 13, textDecorationLine: 'underline', padding: 12 },
-  inlineError: { fontFamily: fonts.medium, color: colors.error, fontSize: 13 },
   totalRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
   totalText: { fontFamily: fonts.bold, color: colors.ink, fontSize: 16 },
   caption: { fontFamily: fonts.body, color: colors.muted, fontSize: 13 },
