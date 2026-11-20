@@ -1,13 +1,13 @@
 import { Platform } from 'react-native';
 import type { Announcement, MenuItem, Order, Report, Role, School, Status, User } from '../types';
 
-export class ApiError extends Error {
-  status: number;
-  constructor(message: string, status: number) {
-    super(message);
-    this.status = status;
-  }
-}
+import { demoApi } from './demo';
+import { ApiError } from './errors';
+
+export { ApiError, errorMessage } from './errors';
+
+/** Build de demonstração (GitHub Pages): sem servidor, os dados ficam no navegador. */
+export const DEMO = process.env.EXPO_PUBLIC_DEMO === '1';
 
 // No navegador, o app é servido pelo próprio servidor (mesmo endereço).
 // Em desenvolvimento, o Expo roda na porta 8081 e a API na 3000.
@@ -48,10 +48,7 @@ async function request<T>(method: string, path: string, body?: unknown, { quiet4
   return data as T;
 }
 
-export const errorMessage = (error: unknown) =>
-  error instanceof ApiError ? error.message : 'Algo deu errado. Tente de novo.';
-
-export const api = {
+const serverApi = {
   me: () => request<{ user: User | null }>('GET', '/auth/me').then((data) => data.user),
 
   /** `as`: lado escolhido na tela (aluno ou atendente). O servidor recusa se a conta for do outro lado. */
@@ -91,3 +88,5 @@ export const api = {
   setStatus: (number: number, status: Status) =>
     request<{ order: Order }>('PATCH', `/orders/${number}/status`, { status }).then((data) => data.order),
 };
+
+export const api: typeof serverApi = DEMO ? demoApi : serverApi;

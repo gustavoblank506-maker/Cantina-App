@@ -4,7 +4,8 @@ import { FadeIn, SlideUpText, Tap } from '../components/motion';
 import { NoticeBox, PrimaryButton, SelectField, Switcher, TextField } from '../components/ui';
 import { useLayout } from '../hooks/useLayout';
 import { useNotice } from '../hooks/useNotice';
-import { api, errorMessage } from '../services/api';
+import { api, DEMO, errorMessage } from '../services/api';
+import { DEMO_ATTENDANT } from '../services/demo';
 import { styles } from '../theme';
 import type { Role, School, User } from '../types';
 
@@ -123,6 +124,13 @@ export function LoginView({ message, onLogin }: { message: string; onLogin: (use
             ? `Cadastro para alunos do ${school?.name ?? 'SENAI'}, com a matrícula da escola.`
             : 'Entre com sua matrícula para fazer o pedido.'}
       </Text>
+      {DEMO && (
+        <Text style={[styles.note, { marginBottom: 16 }]}>
+          {staff
+            ? `Demonstração: entre com o usuário ${DEMO_ATTENDANT.username} e a senha ${DEMO_ATTENDANT.password}.`
+            : 'Demonstração: os dados ficam só neste navegador. Abra o aluno e a atendente em abas diferentes.'}
+        </Text>
+      )}
       {!staff && <Switcher options={modes} value={mode} onChange={switchTo} />}
       <View style={[styles.list, { gap: 14, marginTop: staff ? 0 : 16 }]}>
         {registering && (
