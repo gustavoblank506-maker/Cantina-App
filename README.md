@@ -9,6 +9,12 @@ Na tela inicial, a pessoa escolhe o lado: **Aluno** ou **Atendente**.
 
 Uma conta de aluno não entra pelo lado da atendente, nem o contrário: o servidor confere.
 
+## Publicar (link para os usuários)
+
+[![Publicar no Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/gustavoblank506-maker/Cantina-App)
+
+O botão usa o [render.yaml](render.yaml): entre com o GitHub, escolha a senha da atendente e confirme. O link fica no formato `https://cantina-senai-alagoinhas.onrender.com`. No plano gratuito, contas e pedidos zeram quando o serviço reinicia (depois de 15 minutos sem uso), e a primeira abertura depois disso leva cerca de 1 minuto.
+
 ## Como rodar
 
 Precisa do **Node.js 22.13 ou mais novo** (recomendado: 24).

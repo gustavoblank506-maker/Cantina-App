@@ -1,0 +1,31 @@
+# Publicação no Render (plano gratuito), com um clique:
+# https://render.com/deploy?repo=https://github.com/gustavoblank506-maker/Cantina-App
+#
+# No plano gratuito o disco não é permanente: contas e pedidos zeram quando o serviço
+# reinicia (por exemplo, depois de 15 minutos sem uso). A conta da atendente é recriada
+# sozinha a partir das variáveis abaixo.
+services:
+  - type: web
+    name: cantina-senai-alagoinhas
+    runtime: node
+    plan: free
+    region: virginia
+    # O build do app web precisa das dependências de desenvolvimento.
+    buildCommand: npm ci --include=dev && npm run build:web
+    startCommand: npm start
+    healthCheckPath: /api/school
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      # O Render tem um proxy na frente do app.
+      - key: TRUST_PROXY
+        value: "1"
+      - key: ATTENDANT_USERNAME
+        value: atendente
+      - key: ATTENDANT_NAME
+        value: Atendente
+      # O Render pede este valor na hora de publicar. Mínimo de 8 caracteres.
+      - key: ATTENDANT_PASSWORD
+        sync: false
