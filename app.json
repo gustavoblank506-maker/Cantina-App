@@ -25,11 +25,9 @@
       "output": "single",
       "name": "Cantina"
     },
-    "experiments": {
-      "baseUrl": "/Cantina-App"
-    },
     "plugins": [
-      "expo-font"
+      "expo-font",
+      "expo-status-bar"
     ]
   }
 }
